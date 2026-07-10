@@ -1,15 +1,13 @@
-"""LLM-based labeler with a mock mode and an Ollama/Gemma mode.
+"""LLM-based labeler with mock mode and Hugging Face local inference.
 
 Modes
 -----
-* ``mock``   : uses the negation-aware rule labeler internally so the whole
-               project is runnable with no external dependencies. Deterministic
-               (no randomness).
-* ``ollama`` : calls a locally running Ollama server (default Gemma) via the
-               HTTP API. The model is asked to return JSON only; the response is
-               parsed robustly and falls back gracefully on malformed output.
+* ``mock``        : uses the negation-aware rule labeler internally so the whole
+                    project is runnable with no model download. Deterministic.
+* ``huggingface`` : downloads/loads a local Hugging Face model with
+                    ``transformers`` and prompts it to return JSON labels.
 
-No paid APIs, no API keys, and no external hosted services are used.
+No hosted APIs, no API keys, and no clinical data are used.
 """
 from __future__ import annotations
 
@@ -17,13 +15,9 @@ import json
 import re
 from typing import Dict, Tuple
 
-import requests
-
 from labelers.negation_rule_labeler import NegationRuleLabeler
 from utils import LABELS, PATHOLOGIES
 
-# The report text is injected in place of <REPORT_TEXT>. Using .replace() (rather
-# than str.format) avoids having to escape the JSON braces in the template.
 PROMPT_TEMPLATE = """You are labeling a chest X-ray radiology report for research evaluation.
 For each condition, assign exactly one label from:
 positive, negative, uncertain, not_mentioned.
@@ -55,88 +49,109 @@ def build_prompt(report_text: str) -> str:
 
 
 class LLMLabeler:
-    """Label reports with an LLM (mock or local Ollama/Gemma)."""
+    """Label reports with mock rules or a local Hugging Face model."""
 
     def __init__(
         self,
         mode: str = "mock",
-        model: str = "gemma3:1b",
-        endpoint: str = "http://localhost:11434/api/generate",
+        model: str = "Qwen/Qwen2.5-0.5B-Instruct",
         fallback_to_mock: bool = True,
-        timeout: int = 60,
+        max_new_tokens: int = 160,
+        cache_dir: str | None = None,
     ) -> None:
         self.mode = mode
         self.model = model
-        self.endpoint = endpoint
         self.fallback_to_mock = fallback_to_mock
-        self.timeout = timeout
+        self.max_new_tokens = max_new_tokens
+        self.cache_dir = cache_dir
+
         self._mock_backend = NegationRuleLabeler()
+        self._tokenizer = None
+        self._model_obj = None
+        self._device = "cpu"
+        self._load_error: str | None = None
+
         # Counters used for honest run metadata.
         self.parse_errors = 0
         self.real_calls = 0
         self.fallback_calls = 0
-        self.available: bool | None = None
-        # ``_use_real`` decides whether label_report actually calls Ollama.
-        self._use_real = mode == "ollama"
-        # Method name is provisional until resolve() is called.
-        self.name = "llm_mock" if mode == "mock" else "llm_gemma_ollama"
+        self._use_real = mode == "huggingface"
+        self.name = "llm_mock" if mode == "mock" else "llm_hf_local"
 
     # ------------------------------------------------------------------ setup
-    def check_available(self) -> bool:
-        """Return True if the local Ollama server responds on its base URL."""
-        base = self.endpoint.split("/api/")[0]
-        try:
-            response = requests.get(base, timeout=5)
-            self.available = response.status_code == 200
-        except Exception:
-            self.available = False
-        return bool(self.available)
-
     def resolve(self) -> Tuple[str, bool]:
-        """Decide the effective method name and whether to skip this labeler.
+        """Decide the effective method name and whether to run this labeler.
 
-        Returns ``(name, active)``. ``active=False`` means the labeler should be
-        skipped entirely (ollama requested, unreachable, and no fallback).
+        Returns ``(name, active)``. ``active=False`` means the caller should stop
+        or skip this labeler depending on the config.
 
         Naming is honest about what actually ran:
-          * mock mode                         -> ``llm_mock``
-          * ollama reachable                  -> ``llm_gemma_ollama``
-          * ollama unreachable + fallback     -> ``llm_gemma_fallback_mock``
+          * mock mode                            -> ``llm_mock``
+          * Hugging Face model loaded locally    -> ``llm_hf_local``
+          * HF load failed + fallback requested  -> ``llm_hf_fallback_mock``
         """
         if self.mode == "mock":
             self.name = "llm_mock"
             self._use_real = False
             return self.name, True
 
-        # ollama mode
-        if self.check_available():
-            self.name = "llm_gemma_ollama"
-            self._use_real = True
-            return self.name, True
+        if self.mode != "huggingface":
+            self._load_error = f"Unsupported LLM mode: {self.mode}"
+            if self.fallback_to_mock:
+                self.name = "llm_hf_fallback_mock"
+                self._use_real = False
+                return self.name, True
+            return self.name, False
 
-        if self.fallback_to_mock:
-            self.name = "llm_gemma_fallback_mock"
+        try:
+            self._load_hf_model()
+        except Exception as exc:  # noqa: BLE001 - keep message user-friendly
+            self._load_error = str(exc)
+            if self.fallback_to_mock:
+                self.name = "llm_hf_fallback_mock"
+                self._use_real = False
+                return self.name, True
+            self.name = "llm_hf_local"
             self._use_real = False
-            return self.name, True
+            return self.name, False
 
-        # Unreachable and no fallback requested: caller should skip.
-        self.name = "llm_gemma_ollama"
-        self._use_real = False
-        return self.name, False
+        self.name = "llm_hf_local"
+        self._use_real = True
+        return self.name, True
+
+    def _load_hf_model(self) -> None:
+        """Load tokenizer and model from Hugging Face into local memory/cache."""
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        self._device = "cuda" if torch.cuda.is_available() else "cpu"
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            self.model,
+            cache_dir=self.cache_dir,
+            trust_remote_code=True,
+        )
+        dtype = torch.float16 if self._device == "cuda" else torch.float32
+        self._model_obj = AutoModelForCausalLM.from_pretrained(
+            self.model,
+            cache_dir=self.cache_dir,
+            torch_dtype=dtype,
+            trust_remote_code=True,
+        )
+        self._model_obj.to(self._device)
+        self._model_obj.eval()
 
     # ------------------------------------------------------------------ public
     def label_report(self, report_text: str) -> Dict[str, str]:
         if not self._use_real:
             return self._mock_label(report_text)
 
-        # Real Ollama/Gemma call.
         try:
-            raw = self._call_ollama(report_text)
-        except Exception as exc:  # network / server errors
+            raw = self._call_huggingface(report_text)
+        except Exception as exc:  # noqa: BLE001 - user-facing fallback path
             if self.fallback_to_mock:
                 self.fallback_calls += 1
                 print(
-                    f"[LLMLabeler] Ollama call failed ({exc}); "
+                    f"[LLMLabeler] Hugging Face generation failed ({exc}); "
                     "mock fallback for this report."
                 )
                 return self._mock_label(report_text)
@@ -155,28 +170,61 @@ class LLMLabeler:
         labels["parse_error"] = False
         return labels
 
-    def _call_ollama(self, report_text: str) -> str:
-        payload = {
-            "model": self.model,
-            "prompt": build_prompt(report_text),
-            "stream": False,
-            "format": "json",
-        }
-        response = requests.post(self.endpoint, json=payload, timeout=self.timeout)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("response", "")
+    def _call_huggingface(self, report_text: str) -> str:
+        """Run local prompt-based inference with the loaded HF model."""
+        import torch
+
+        if self._tokenizer is None or self._model_obj is None:
+            self._load_hf_model()
+
+        assert self._tokenizer is not None
+        assert self._model_obj is not None
+
+        prompt = build_prompt(report_text)
+
+        # Prefer chat template for instruction-tuned chat models; fall back to
+        # plain text prompt if the tokenizer does not define one.
+        try:
+            messages = [{"role": "user", "content": prompt}]
+            formatted = self._tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        except Exception:
+            formatted = prompt
+
+        inputs = self._tokenizer(
+            formatted,
+            return_tensors="pt",
+            truncation=True,
+            max_length=2048,
+        )
+        inputs = {key: value.to(self._device) for key, value in inputs.items()}
+        input_length = inputs["input_ids"].shape[-1]
+
+        pad_token_id = self._tokenizer.eos_token_id
+        with torch.no_grad():
+            generated = self._model_obj.generate(
+                **inputs,
+                max_new_tokens=self.max_new_tokens,
+                do_sample=False,
+                pad_token_id=pad_token_id,
+            )
+
+        new_tokens = generated[0][input_length:]
+        return self._tokenizer.decode(new_tokens, skip_special_tokens=True)
 
     def _parse_response(self, raw: str) -> Tuple[Dict[str, str], bool]:
-        """Robustly parse the model output into a validated label dict."""
+        """Robustly parse model output into a validated label dictionary."""
         text = str(raw).strip()
-        # Strip markdown code fences if present.
         text = re.sub(r"^```(?:json)?", "", text).strip()
         text = re.sub(r"```$", "", text).strip()
-        # Extract the first {...} block in case the model added prose.
+
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             text = match.group(0)
+
         try:
             parsed = json.loads(text)
         except (json.JSONDecodeError, ValueError, TypeError):
