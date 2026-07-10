@@ -3,7 +3,7 @@
 Usage
 -----
     python src/main.py --config configs/demo_mock.yaml
-    python src/main.py --config configs/demo_ollama_gemma.yaml
+    python src/main.py --config configs/demo_hf_local.yaml
 
 The pipeline loads the config and data, runs every labeler, evaluates the
 predictions, performs error analysis, generates plots, writes run metadata, and
@@ -46,8 +46,8 @@ def build_labelers(config: Dict) -> tuple:
     """Instantiate the labelers requested by the config.
 
     Returns ``(labelers, llm)`` where ``llm`` is the resolved LLMLabeler (or
-    ``None`` if no LLM ran). The LLM is only included after resolving whether
-    real Ollama/Gemma is reachable, so method names are honest.
+    ``None`` if no LLM ran). The LLM is only included after resolving whether the
+    requested backend is actually available, so method names are honest.
     """
     labelers: List = [KeywordLabeler(), NegationRuleLabeler()]
     llm: LLMLabeler | None = None
@@ -56,20 +56,19 @@ def build_labelers(config: Dict) -> tuple:
     if llm_cfg.get("enabled", True):
         candidate = LLMLabeler(
             mode=llm_cfg.get("mode", "mock"),
-            model=llm_cfg.get("model", "gemma3:1b"),
-            endpoint=llm_cfg.get(
-                "endpoint", "http://localhost:11434/api/generate"
-            ),
+            model=llm_cfg.get("model", "Qwen/Qwen2.5-0.5B-Instruct"),
             fallback_to_mock=llm_cfg.get("fallback_to_mock", True),
+            max_new_tokens=llm_cfg.get("max_new_tokens", 160),
+            cache_dir=llm_cfg.get("cache_dir"),
         )
         name, active = candidate.resolve()
         if active:
-            if candidate.mode == "ollama" and candidate._use_real:
-                print(f"LLM: real Ollama/Gemma reachable -> method '{name}'")
-            elif candidate.mode == "ollama":
+            if candidate.mode == "huggingface" and candidate._use_real:
+                print(f"LLM: Hugging Face model loaded locally -> method '{name}'")
+            elif candidate.mode == "huggingface":
                 print(
-                    "LLM: Ollama NOT reachable; using mock fallback -> "
-                    f"method '{name}'"
+                    "LLM: Hugging Face model could not be loaded; using mock "
+                    f"fallback -> method '{name}'"
                 )
             else:
                 print(f"LLM: mock mode -> method '{name}'")
@@ -77,11 +76,15 @@ def build_labelers(config: Dict) -> tuple:
             llm = candidate
         else:
             print(
-                "LLM: Ollama not reachable at "
-                f"{candidate.endpoint} and fallback_to_mock is false.\n"
-                "     Skipping the LLM labeler. Start Ollama with "
-                "'ollama run gemma3:1b' or use configs/demo_mock.yaml."
+                "LLM: Hugging Face local inference was requested, but the model "
+                "could not be loaded and fallback_to_mock is false.\n"
+                f"     Model: {candidate.model}\n"
+                f"     Error: {candidate._load_error}\n"
+                "     Try: python src/check_huggingface.py --model "
+                f"{candidate.model}\n"
+                "     Or use configs/demo_mock.yaml for the quick reproducible demo."
             )
+            sys.exit(1)
     return labelers, llm
 
 
@@ -124,7 +127,7 @@ def print_summary(
     for _, row in macro.iterrows():
         method = row["method"]
         print(
-            f"  {method:<14} "
+            f"  {method:<18} "
             f"macro-F1={float(row['macro_f1']):.3f}  "
             f"overall-acc={float(row['accuracy']):.3f}  "
             f"exact-match={exact.get(method, 0):.3f}"
@@ -135,7 +138,7 @@ def print_summary(
         print("  (no errors)")
     else:
         for method, count in error_df.groupby("method").size().items():
-            print(f"  {method:<14} {count} incorrect predictions")
+            print(f"  {method:<18} {count} incorrect predictions")
         print("\nError types (all methods):")
         for etype, count in (
             error_df.groupby("error_type").size().sort_values(ascending=False).items()
@@ -154,12 +157,9 @@ def write_run_metadata(
 ) -> Dict:
     """Write experiments/run_metadata.json describing exactly what ran."""
     llm_cfg_present = llm is not None
-    real_ollama_used = bool(
-        llm_cfg_present and llm._use_real and llm.real_calls > 0
-    )
+    real_hf_used = bool(llm_cfg_present and llm._use_real and llm.real_calls > 0)
     fallback_mock_used = bool(
-        llm_cfg_present
-        and (llm.name == "llm_gemma_fallback_mock" or llm.fallback_calls > 0)
+        llm_cfg_present and (llm.name == "llm_hf_fallback_mock" or llm.fallback_calls > 0)
     )
     metadata = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -169,11 +169,11 @@ def write_run_metadata(
         "methods_run": methods,
         "llm_mode": llm.mode if llm_cfg_present else None,
         "llm_model": llm.model if llm_cfg_present else None,
-        "ollama_endpoint": llm.endpoint if llm_cfg_present else None,
         "fallback_to_mock": llm.fallback_to_mock if llm_cfg_present else None,
-        "real_ollama_gemma_used": real_ollama_used,
+        "cache_dir": llm.cache_dir if llm_cfg_present else None,
+        "real_huggingface_used": real_hf_used,
         "fallback_mock_used": fallback_mock_used,
-        "real_gemma_calls": llm.real_calls if llm_cfg_present else 0,
+        "real_hf_calls": llm.real_calls if llm_cfg_present else 0,
         "fallback_calls": llm.fallback_calls if llm_cfg_present else 0,
         "output_files": output_files,
     }
@@ -247,14 +247,13 @@ def main() -> None:
 
     print_summary(results, error_df, predictions)
 
-    # Honest, explicit report of what the LLM method actually was.
     print("\nLLM run type:")
     if llm is None:
         print("  no LLM labeler ran")
     else:
-        print(f"  method name        : {llm.name}")
-        print(f"  real Gemma used    : {metadata['real_ollama_gemma_used']}")
-        print(f"  fallback mock used : {metadata['fallback_mock_used']}")
+        print(f"  method name             : {llm.name}")
+        print(f"  real Hugging Face used  : {metadata['real_huggingface_used']}")
+        print(f"  fallback mock used      : {metadata['fallback_mock_used']}")
 
     print("\nOutputs written to:")
     print(f"  {predictions_path}")

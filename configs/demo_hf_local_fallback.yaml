@@ -1,12 +1,16 @@
 data_path: data/synthetic_demo_reports.csv
 output_dir: experiments
 
+# Forgiving local Hugging Face config. Tries to load the model first; if loading
+# fails it falls back to mock mode. Results produced this way are labeled
+# `llm_hf_fallback_mock` so they are never mistaken for real model output.
 llm:
   enabled: true
-  mode: mock            # runs with no external model download
+  mode: huggingface
   model: Qwen/Qwen2.5-0.5B-Instruct
   fallback_to_mock: true
   max_new_tokens: 160
+  cache_dir: null
 
 evaluation:
   pathologies:

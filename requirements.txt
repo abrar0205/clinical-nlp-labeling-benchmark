@@ -4,4 +4,6 @@ scikit-learn
 matplotlib
 seaborn
 PyYAML
-requests
+torch
+transformers
+huggingface_hub

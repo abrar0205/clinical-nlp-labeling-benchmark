@@ -1,12 +1,16 @@
 data_path: data/synthetic_demo_reports.csv
 output_dir: experiments
 
+# Real local Hugging Face inference. This downloads/loads the model locally via
+# transformers. If the model cannot be loaded, this run fails clearly
+# (fallback_to_mock: false) so results are never silently mocked.
 llm:
   enabled: true
-  mode: mock            # runs with no external model download
+  mode: huggingface
   model: Qwen/Qwen2.5-0.5B-Instruct
-  fallback_to_mock: true
+  fallback_to_mock: false
   max_new_tokens: 160
+  cache_dir: null
 
 evaluation:
   pathologies:
