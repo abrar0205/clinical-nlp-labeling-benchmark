@@ -1,18 +1,14 @@
 """Plot generation with matplotlib / seaborn.
 
-Produces four figures:
+Produces four figures, all written only to ``experiments/plots``:
   * macro-F1 by method
   * per-pathology macro-F1 by method
   * error count by method
   * confusion matrix for one selected pathology (default: pneumonia)
-
-Plots are written to ``experiments/plots`` and copied to
-``docs/assets/plots`` for the GitHub Pages dashboard.
 """
 from __future__ import annotations
 
 import os
-import shutil
 
 import matplotlib
 
@@ -136,11 +132,3 @@ def generate_all_plots(
         confusion_pathology,
         os.path.join(plots_dir, f"confusion_matrix_{confusion_pathology}.png"),
     )
-
-
-def copy_plots(src_dir: str, dst_dir: str) -> None:
-    """Copy generated PNG plots to the docs assets folder."""
-    ensure_dir(dst_dir)
-    for name in os.listdir(src_dir):
-        if name.endswith(".png"):
-            shutil.copy2(os.path.join(src_dir, name), os.path.join(dst_dir, name))

@@ -71,28 +71,79 @@ class LLMLabeler:
         self.fallback_to_mock = fallback_to_mock
         self.timeout = timeout
         self._mock_backend = NegationRuleLabeler()
+        # Counters used for honest run metadata.
         self.parse_errors = 0
-        # Method name is mode-aware so results distinguish mock vs. ollama runs.
-        self.name = "llm_mock" if mode == "mock" else "llm_ollama"
+        self.real_calls = 0
+        self.fallback_calls = 0
+        self.available: bool | None = None
+        # ``_use_real`` decides whether label_report actually calls Ollama.
+        self._use_real = mode == "ollama"
+        # Method name is provisional until resolve() is called.
+        self.name = "llm_mock" if mode == "mock" else "llm_gemma_ollama"
+
+    # ------------------------------------------------------------------ setup
+    def check_available(self) -> bool:
+        """Return True if the local Ollama server responds on its base URL."""
+        base = self.endpoint.split("/api/")[0]
+        try:
+            response = requests.get(base, timeout=5)
+            self.available = response.status_code == 200
+        except Exception:
+            self.available = False
+        return bool(self.available)
+
+    def resolve(self) -> Tuple[str, bool]:
+        """Decide the effective method name and whether to skip this labeler.
+
+        Returns ``(name, active)``. ``active=False`` means the labeler should be
+        skipped entirely (ollama requested, unreachable, and no fallback).
+
+        Naming is honest about what actually ran:
+          * mock mode                         -> ``llm_mock``
+          * ollama reachable                  -> ``llm_gemma_ollama``
+          * ollama unreachable + fallback     -> ``llm_gemma_fallback_mock``
+        """
+        if self.mode == "mock":
+            self.name = "llm_mock"
+            self._use_real = False
+            return self.name, True
+
+        # ollama mode
+        if self.check_available():
+            self.name = "llm_gemma_ollama"
+            self._use_real = True
+            return self.name, True
+
+        if self.fallback_to_mock:
+            self.name = "llm_gemma_fallback_mock"
+            self._use_real = False
+            return self.name, True
+
+        # Unreachable and no fallback requested: caller should skip.
+        self.name = "llm_gemma_ollama"
+        self._use_real = False
+        return self.name, False
 
     # ------------------------------------------------------------------ public
     def label_report(self, report_text: str) -> Dict[str, str]:
-        if self.mode == "mock":
+        if not self._use_real:
             return self._mock_label(report_text)
 
-        # ollama mode
+        # Real Ollama/Gemma call.
         try:
             raw = self._call_ollama(report_text)
         except Exception as exc:  # network / server errors
             if self.fallback_to_mock:
+                self.fallback_calls += 1
                 print(
                     f"[LLMLabeler] Ollama call failed ({exc}); "
-                    "falling back to mock for this report."
+                    "mock fallback for this report."
                 )
                 return self._mock_label(report_text)
             self.parse_errors += 1
             return self._default_labels(parse_error=True)
 
+        self.real_calls += 1
         labels, parse_error = self._parse_response(raw)
         if parse_error:
             self.parse_errors += 1

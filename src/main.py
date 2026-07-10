@@ -6,14 +6,16 @@ Usage
     python src/main.py --config configs/demo_ollama_gemma.yaml
 
 The pipeline loads the config and data, runs every labeler, evaluates the
-predictions, performs error analysis, generates plots, copies the plots to the
-docs assets folder, and prints a clean terminal summary.
+predictions, performs error analysis, generates plots, writes run metadata, and
+prints a clean terminal summary. All outputs are written under ``experiments/``.
 """
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
+from datetime import datetime, timezone
 from typing import Dict, List
 
 import pandas as pd
@@ -27,10 +29,7 @@ from labelers.keyword_labeler import KeywordLabeler  # noqa: E402
 from labelers.llm_labeler import LLMLabeler  # noqa: E402
 from labelers.negation_rule_labeler import NegationRuleLabeler  # noqa: E402
 from utils import PATHOLOGIES, ensure_dir, load_config  # noqa: E402
-from visualization.plot_results import (  # noqa: E402
-    copy_plots,
-    generate_all_plots,
-)
+from visualization.plot_results import generate_all_plots  # noqa: E402
 
 PRED_COLUMNS = [
     "report_id",
@@ -43,22 +42,47 @@ PRED_COLUMNS = [
 ]
 
 
-def build_labelers(config: Dict) -> List:
-    """Instantiate the labelers requested by the config."""
+def build_labelers(config: Dict) -> tuple:
+    """Instantiate the labelers requested by the config.
+
+    Returns ``(labelers, llm)`` where ``llm`` is the resolved LLMLabeler (or
+    ``None`` if no LLM ran). The LLM is only included after resolving whether
+    real Ollama/Gemma is reachable, so method names are honest.
+    """
     labelers: List = [KeywordLabeler(), NegationRuleLabeler()]
+    llm: LLMLabeler | None = None
     llm_cfg = config.get("llm", {}) or {}
+
     if llm_cfg.get("enabled", True):
-        labelers.append(
-            LLMLabeler(
-                mode=llm_cfg.get("mode", "mock"),
-                model=llm_cfg.get("model", "gemma3:1b"),
-                endpoint=llm_cfg.get(
-                    "endpoint", "http://localhost:11434/api/generate"
-                ),
-                fallback_to_mock=llm_cfg.get("fallback_to_mock", True),
-            )
+        candidate = LLMLabeler(
+            mode=llm_cfg.get("mode", "mock"),
+            model=llm_cfg.get("model", "gemma3:1b"),
+            endpoint=llm_cfg.get(
+                "endpoint", "http://localhost:11434/api/generate"
+            ),
+            fallback_to_mock=llm_cfg.get("fallback_to_mock", True),
         )
-    return labelers
+        name, active = candidate.resolve()
+        if active:
+            if candidate.mode == "ollama" and candidate._use_real:
+                print(f"LLM: real Ollama/Gemma reachable -> method '{name}'")
+            elif candidate.mode == "ollama":
+                print(
+                    "LLM: Ollama NOT reachable; using mock fallback -> "
+                    f"method '{name}'"
+                )
+            else:
+                print(f"LLM: mock mode -> method '{name}'")
+            labelers.append(candidate)
+            llm = candidate
+        else:
+            print(
+                "LLM: Ollama not reachable at "
+                f"{candidate.endpoint} and fallback_to_mock is false.\n"
+                "     Skipping the LLM labeler. Start Ollama with "
+                "'ollama run gemma3:1b' or use configs/demo_mock.yaml."
+            )
+    return labelers, llm
 
 
 def run_predictions(labelers: List, df: pd.DataFrame) -> pd.DataFrame:
@@ -118,7 +142,44 @@ def print_summary(
         ):
             print(f"  {etype:<34} {count}")
 
-    print("\nDone. Outputs written to experiments/ and docs/assets/plots/.")
+
+def write_run_metadata(
+    path: str,
+    args_config: str,
+    data_path: str,
+    num_reports: int,
+    methods: List[str],
+    llm: "LLMLabeler | None",
+    output_files: List[str],
+) -> Dict:
+    """Write experiments/run_metadata.json describing exactly what ran."""
+    llm_cfg_present = llm is not None
+    real_ollama_used = bool(
+        llm_cfg_present and llm._use_real and llm.real_calls > 0
+    )
+    fallback_mock_used = bool(
+        llm_cfg_present
+        and (llm.name == "llm_gemma_fallback_mock" or llm.fallback_calls > 0)
+    )
+    metadata = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "config_path": args_config,
+        "data_path": data_path,
+        "num_reports": num_reports,
+        "methods_run": methods,
+        "llm_mode": llm.mode if llm_cfg_present else None,
+        "llm_model": llm.model if llm_cfg_present else None,
+        "ollama_endpoint": llm.endpoint if llm_cfg_present else None,
+        "fallback_to_mock": llm.fallback_to_mock if llm_cfg_present else None,
+        "real_ollama_gemma_used": real_ollama_used,
+        "fallback_mock_used": fallback_mock_used,
+        "real_gemma_calls": llm.real_calls if llm_cfg_present else 0,
+        "fallback_calls": llm.fallback_calls if llm_cfg_present else 0,
+        "output_files": output_files,
+    }
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(metadata, handle, indent=2)
+    return metadata
 
 
 def main() -> None:
@@ -134,11 +195,9 @@ def main() -> None:
     data_path = config["data_path"]
     output_dir = config.get("output_dir", "experiments")
     plots_dir = os.path.join(output_dir, "plots")
-    docs_plots_dir = os.path.join("docs", "assets", "plots")
 
     ensure_dir(output_dir)
     ensure_dir(plots_dir)
-    ensure_dir(docs_plots_dir)
 
     if not os.path.exists(data_path):
         print(f"ERROR: data file not found: {data_path}")
@@ -147,27 +206,63 @@ def main() -> None:
     df = pd.read_csv(data_path)
     print(f"Loaded {len(df)} reports from {data_path}")
 
-    labelers = build_labelers(config)
+    labelers, llm = build_labelers(config)
     print("Methods:", ", ".join(labeler.name for labeler in labelers))
 
     predictions = run_predictions(labelers, df)
-    predictions[PRED_COLUMNS].to_csv(
-        os.path.join(output_dir, "predictions.csv"), index=False
-    )
+    predictions_path = os.path.join(output_dir, "predictions.csv")
+    results_path = os.path.join(output_dir, "results.csv")
+    error_path = os.path.join(output_dir, "error_analysis.csv")
+    metadata_path = os.path.join(output_dir, "run_metadata.json")
+
+    predictions[PRED_COLUMNS].to_csv(predictions_path, index=False)
 
     results = compute_results(predictions)
-    results.to_csv(os.path.join(output_dir, "results.csv"), index=False)
+    results.to_csv(results_path, index=False)
 
     error_df = build_error_analysis(predictions)
-    error_df.to_csv(os.path.join(output_dir, "error_analysis.csv"), index=False)
+    error_df.to_csv(error_path, index=False)
 
     confusion_pathology = (config.get("evaluation", {}) or {}).get(
         "confusion_pathology", "pneumonia"
     )
     generate_all_plots(results, predictions, error_df, plots_dir, confusion_pathology)
-    copy_plots(plots_dir, docs_plots_dir)
+
+    output_files = [
+        predictions_path,
+        results_path,
+        error_path,
+        metadata_path,
+        plots_dir,
+    ]
+    metadata = write_run_metadata(
+        metadata_path,
+        args.config,
+        data_path,
+        len(df),
+        [labeler.name for labeler in labelers],
+        llm,
+        output_files,
+    )
 
     print_summary(results, error_df, predictions)
+
+    # Honest, explicit report of what the LLM method actually was.
+    print("\nLLM run type:")
+    if llm is None:
+        print("  no LLM labeler ran")
+    else:
+        print(f"  method name        : {llm.name}")
+        print(f"  real Gemma used    : {metadata['real_ollama_gemma_used']}")
+        print(f"  fallback mock used : {metadata['fallback_mock_used']}")
+
+    print("\nOutputs written to:")
+    print(f"  {predictions_path}")
+    print(f"  {results_path}")
+    print(f"  {error_path}")
+    print(f"  {metadata_path}")
+    print(f"  {plots_dir}/ (plots)")
+    print("\nTip: check experiments/run_metadata.json to confirm the run type.")
 
 
 if __name__ == "__main__":

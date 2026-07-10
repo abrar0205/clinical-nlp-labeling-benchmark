@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-07-10T19:50:12.737864+00:00",
+  "config_path": "configs/demo_mock.yaml",
+  "data_path": "data/synthetic_demo_reports.csv",
+  "num_reports": 30,
+  "methods_run": [
+    "keyword",
+    "negation_rule",
+    "llm_mock"
+  ],
+  "llm_mode": "mock",
+  "llm_model": "gemma3:1b",
+  "ollama_endpoint": "http://localhost:11434/api/generate",
+  "fallback_to_mock": true,
+  "real_ollama_gemma_used": false,
+  "fallback_mock_used": false,
+  "real_gemma_calls": 0,
+  "fallback_calls": 0,
+  "output_files": [
+    "experiments\\predictions.csv",
+    "experiments\\results.csv",
+    "experiments\\error_analysis.csv",
+    "experiments\\run_metadata.json",
+    "experiments\\plots"
+  ]
+}
