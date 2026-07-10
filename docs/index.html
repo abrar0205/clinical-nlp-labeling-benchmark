@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Radiology Report Labeling Mini-Benchmark</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <p class="eyebrow">Clinical NLP &middot; Medical AI Evaluation</p>
+      <h1>Radiology Report Labeling Mini-Benchmark</h1>
+      <p class="subtitle">Keyword, Negation-Aware, and Gemma-Based Labeling</p>
+      <p class="disclaimer">
+        A lightweight preparation benchmark &mdash; <strong>not a clinical tool</strong>
+        and <strong>not clinically validated</strong>. Uses fully synthetic demo reports.
+      </p>
+      <a class="button" href="https://github.com/&lt;your-username&gt;/radiology-report-labeling-benchmark">
+        View on GitHub
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <section class="card">
+      <h2>Motivation</h2>
+      <p>
+        Chest X-ray classifiers are trained on pathology labels that are
+        themselves extracted from free-text radiology reports. If those labels
+        are wrong, every downstream model inherits the error. This project asks a
+        focused question about how we extract those labels.
+      </p>
+      <h3>Why radiology report labeling matters</h3>
+      <ul>
+        <li>Manual annotation of hundreds of thousands of reports is infeasible.</li>
+        <li>Label quality directly bounds downstream imaging-model quality.</li>
+        <li>Honest benchmarks let us compare labeling methods reproducibly.</li>
+      </ul>
+      <blockquote>
+        <strong>Research question:</strong> How do keyword-based, negation-aware,
+        and LLM-based labeling approaches differ when extracting pathology labels
+        from chest X-ray reports containing negation, uncertainty, and clinical
+        context?
+      </blockquote>
+    </section>
+
+    <section class="card">
+      <h2>Methods compared</h2>
+      <div class="grid grid-3">
+        <div class="mini">
+          <h3>1. Keyword baseline</h3>
+          <p>Pathology word present &rarr; <code>positive</code>, else
+          <code>not_mentioned</code>. No negation or uncertainty handling.</p>
+        </div>
+        <div class="mini">
+          <h3>2. Negation-aware rules</h3>
+          <p>Clause splitting plus window-based negation and uncertainty cues.
+          Transparent and readable.</p>
+        </div>
+        <div class="mini">
+          <h3>3. Gemma via Ollama</h3>
+          <p>Local LLM prompted to return JSON labels. Optional; a
+          <code>mock</code> mode keeps the repo runnable everywhere.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>The four pathologies &amp; label space</h2>
+      <div class="grid grid-2">
+        <div>
+          <h3>Pathologies</h3>
+          <ul>
+            <li>Pneumonia</li>
+            <li>Pleural Effusion</li>
+            <li>Pneumothorax</li>
+            <li>Cardiomegaly</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Labels</h3>
+          <ul>
+            <li><code>positive</code> &mdash; condition present</li>
+            <li><code>negative</code> &mdash; explicitly absent / negated</li>
+            <li><code>uncertain</code> &mdash; possibility, cannot exclude</li>
+            <li><code>not_mentioned</code> &mdash; not discussed</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Example synthetic reports</h2>
+      <p class="note">All snippets are artificial and written for this project.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Report</th>
+            <th>Pneumonia</th>
+            <th>Pleural effusion</th>
+            <th>Pneumothorax</th>
+            <th>Cardiomegaly</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>&ldquo;No evidence of pneumothorax or pleural effusion.&rdquo;</td>
+            <td>not_mentioned</td><td class="neg">negative</td><td class="neg">negative</td><td>not_mentioned</td>
+          </tr>
+          <tr>
+            <td>&ldquo;Mild cardiomegaly is present.&rdquo;</td>
+            <td>not_mentioned</td><td>not_mentioned</td><td>not_mentioned</td><td class="pos">positive</td>
+          </tr>
+          <tr>
+            <td>&ldquo;Right lower lobe opacity may represent pneumonia.&rdquo;</td>
+            <td class="unc">uncertain</td><td>not_mentioned</td><td>not_mentioned</td><td>not_mentioned</td>
+          </tr>
+          <tr>
+            <td>&ldquo;Pleural effusion cannot be excluded.&rdquo;</td>
+            <td>not_mentioned</td><td class="unc">uncertain</td><td>not_mentioned</td><td>not_mentioned</td>
+          </tr>
+          <tr>
+            <td>&ldquo;The lungs are clear without focal consolidation.&rdquo;</td>
+            <td class="neg">negative</td><td>not_mentioned</td><td>not_mentioned</td><td>not_mentioned</td>
+          </tr>
+          <tr>
+            <td>&ldquo;Small left apical pneumothorax is seen.&rdquo;</td>
+            <td>not_mentioned</td><td>not_mentioned</td><td class="pos">positive</td><td>not_mentioned</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Results (synthetic demo, mock mode)</h2>
+      <table class="results">
+        <thead>
+          <tr><th>Method</th><th>Overall accuracy</th><th>Macro-F1</th><th>Exact-match / report</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>keyword</td><td>0.708</td><td>0.353</td><td>0.267</td></tr>
+          <tr><td>negation_rule</td><td>0.875</td><td>0.749</td><td>0.567</td></tr>
+          <tr><td>llm_mock</td><td>0.875</td><td>0.749</td><td>0.567</td></tr>
+        </tbody>
+      </table>
+      <p class="note">
+        In mock mode the LLM labeler mirrors the negation-aware labeler. With
+        real Gemma via Ollama the numbers will differ.
+      </p>
+
+      <div class="grid grid-2">
+        <figure>
+          <img src="assets/plots/macro_f1_by_method.png" alt="Macro-F1 by method" />
+          <figcaption>Macro-F1 by method.</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/plots/per_pathology_f1.png" alt="Per-pathology macro-F1 by method" />
+          <figcaption>Per-pathology macro-F1 by method.</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/plots/error_count_by_method.png" alt="Error count by method" />
+          <figcaption>Number of incorrect predictions per method.</figcaption>
+        </figure>
+        <figure>
+          <img src="assets/plots/confusion_matrix_pneumonia.png" alt="Confusion matrix for pneumonia" />
+          <figcaption>Confusion matrices for pneumonia.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Failure modes</h2>
+      <p>The synthetic set is designed to expose where naive labeling breaks:</p>
+      <ul>
+        <li><strong>False positive on negation:</strong>
+          &ldquo;No pneumothorax following line placement.&rdquo; &mdash; keyword
+          matching labels <code>positive</code>; gold is <code>negative</code>.</li>
+        <li><strong>Uncertainty misclassified:</strong>
+          &ldquo;Infiltrate in the left lower lobe, likely representing
+          pneumonia.&rdquo; &mdash; hedging without a listed cue is read as
+          <code>positive</code> instead of <code>uncertain</code>.</li>
+        <li><strong>Missed concept (no keyword):</strong>
+          &ldquo;The heart is enlarged&hellip;&rdquo; &mdash; no exact keyword, so
+          cardiomegaly is missed as <code>not_mentioned</code>.</li>
+        <li><strong>Out-of-vocabulary negation:</strong>
+          &ldquo;Cardiomegaly is not present.&rdquo; &mdash; &ldquo;not present&rdquo;
+          is outside the cue list, so it is read as <code>positive</code>.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Limitations</h2>
+      <ul>
+        <li>Tiny synthetic dataset (30 snippets); numbers are illustrative only.</li>
+        <li>Simple fixed cue lists and windows; misses out-of-vocabulary phrasing.</li>
+        <li>Mock mode is not a real language model.</li>
+        <li>Not clinically validated; not a clinical tool.</li>
+        <li>No real MIMIC-CXR data is used or redistributed.</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>
+        Radiology Report Labeling Mini-Benchmark &middot; research-preparation
+        project &middot;
+        <a href="https://github.com/&lt;your-username&gt;/radiology-report-labeling-benchmark">GitHub</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

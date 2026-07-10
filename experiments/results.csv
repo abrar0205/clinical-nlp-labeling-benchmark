@@ -1,0 +1,16 @@
+method,pathology,accuracy,macro_precision,macro_recall,macro_f1,support
+keyword,pneumonia,0.6667,0.2919,0.5,0.3433,30
+keyword,pleural_effusion,0.6667,0.3214,0.5,0.3611,30
+keyword,pneumothorax,0.7667,0.3056,0.5,0.3409,30
+keyword,cardiomegaly,0.7333,0.34,0.4,0.3659,30
+keyword,macro_avg,0.7083,,,0.3528,120
+negation_rule,pneumonia,0.8667,0.8737,0.7917,0.7903,30
+negation_rule,pleural_effusion,0.9667,0.95,0.9643,0.953,30
+negation_rule,pneumothorax,0.9667,0.9167,0.9583,0.9273,30
+negation_rule,cardiomegaly,0.7,0.315,0.35,0.327,30
+negation_rule,macro_avg,0.875,,,0.7494,120
+llm_mock,pneumonia,0.8667,0.8737,0.7917,0.7903,30
+llm_mock,pleural_effusion,0.9667,0.95,0.9643,0.953,30
+llm_mock,pneumothorax,0.9667,0.9167,0.9583,0.9273,30
+llm_mock,cardiomegaly,0.7,0.315,0.35,0.327,30
+llm_mock,macro_avg,0.875,,,0.7494,120

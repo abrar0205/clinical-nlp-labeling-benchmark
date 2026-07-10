@@ -1,0 +1,17 @@
+data_path: data/synthetic_demo_reports.csv
+output_dir: experiments
+
+llm:
+  enabled: true
+  mode: mock            # runs with no external dependencies
+  model: gemma3:1b
+  endpoint: http://localhost:11434/api/generate
+  fallback_to_mock: true
+
+evaluation:
+  pathologies:
+    - pneumonia
+    - pleural_effusion
+    - pneumothorax
+    - cardiomegaly
+  confusion_pathology: pneumonia

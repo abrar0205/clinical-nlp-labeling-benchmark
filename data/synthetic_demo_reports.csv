@@ -1,0 +1,31 @@
+report_id,report_text,pneumonia_gold,pleural_effusion_gold,pneumothorax_gold,cardiomegaly_gold
+R001,"No evidence of pneumothorax or pleural effusion.",not_mentioned,negative,negative,not_mentioned
+R002,"Mild cardiomegaly is present.",not_mentioned,not_mentioned,not_mentioned,positive
+R003,"Right lower lobe opacity may represent pneumonia.",uncertain,not_mentioned,not_mentioned,not_mentioned
+R004,"Pleural effusion cannot be excluded.",not_mentioned,uncertain,not_mentioned,not_mentioned
+R005,"The lungs are clear without focal consolidation.",negative,not_mentioned,not_mentioned,not_mentioned
+R006,"Small left apical pneumothorax is seen.",not_mentioned,not_mentioned,positive,not_mentioned
+R007,"Cardiomediastinal silhouette is within normal limits.",not_mentioned,not_mentioned,not_mentioned,negative
+R008,"Patchy consolidation in the right lower lobe consistent with pneumonia. Small pleural effusion is also noted.",positive,positive,not_mentioned,not_mentioned
+R009,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,negative,negative,negative
+R010,"The cardiac silhouette is enlarged. Possible small pleural effusion.",not_mentioned,uncertain,not_mentioned,positive
+R011,"Findings suspicious for pneumonia in the left lung base.",uncertain,not_mentioned,not_mentioned,not_mentioned
+R012,"Large right pleural effusion with associated atelectasis.",not_mentioned,positive,not_mentioned,not_mentioned
+R013,"No pneumothorax following line placement.",not_mentioned,not_mentioned,negative,not_mentioned
+R014,"Stable cardiomegaly. No pleural effusion.",not_mentioned,negative,not_mentioned,positive
+R015,"Airspace opacity in the right upper lobe compatible with pneumonia.",positive,not_mentioned,not_mentioned,not_mentioned
+R016,"Questionable left apical pneumothorax, recommend follow-up.",not_mentioned,not_mentioned,uncertain,not_mentioned
+R017,"Moderate pleural effusion cannot be excluded on this view.",not_mentioned,uncertain,not_mentioned,not_mentioned
+R018,"Heart size within normal limits. Lungs are clear.",negative,not_mentioned,not_mentioned,negative
+R019,"Infiltrate in the left lower lobe, likely representing pneumonia.",uncertain,not_mentioned,not_mentioned,not_mentioned
+R020,"Tension pneumothorax on the right requiring urgent attention.",not_mentioned,not_mentioned,positive,not_mentioned
+R021,"The heart is enlarged with pulmonary vascular congestion.",not_mentioned,not_mentioned,not_mentioned,positive
+R022,"No acute cardiopulmonary process. No effusion or pneumothorax.",negative,negative,negative,not_mentioned
+R023,"Bilateral pleural effusions, moderate on the right and small on the left.",not_mentioned,positive,not_mentioned,not_mentioned
+R024,"Enlarged cardiac silhouette suggestive of cardiomegaly.",not_mentioned,not_mentioned,not_mentioned,positive
+R025,"Consolidation versus atelectasis in the right base; pneumonia is possible.",uncertain,not_mentioned,not_mentioned,not_mentioned
+R026,"Interval resolution of previously seen pleural effusion; none seen currently.",not_mentioned,negative,not_mentioned,not_mentioned
+R027,"Cardiomegaly is not present. Lungs are well expanded and clear.",not_mentioned,not_mentioned,not_mentioned,negative
+R028,"Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.",positive,negative,negative,negative
+R029,"Trace pleural effusion, likely physiologic. No focal airspace opacity.",negative,positive,not_mentioned,not_mentioned
+R030,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,negative,negative,negative
