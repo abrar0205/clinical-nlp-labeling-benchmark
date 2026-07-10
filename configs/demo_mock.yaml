@@ -3,10 +3,10 @@ output_dir: experiments
 
 llm:
   enabled: true
-  mode: mock            # runs with no external dependencies
-  model: gemma3:1b
-  endpoint: http://localhost:11434/api/generate
+  mode: mock            # runs with no external model download
+  model: Qwen/Qwen2.5-0.5B-Instruct
   fallback_to_mock: true
+  max_new_tokens: 160
 
 evaluation:
   pathologies:
