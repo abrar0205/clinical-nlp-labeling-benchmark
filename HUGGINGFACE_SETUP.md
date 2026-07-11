@@ -1,31 +1,39 @@
-# Running a Hugging Face model locally
+# Running the Hugging Face model locally
 
-This project can label synthetic radiology-style reports with a local Hugging Face instruction model through `transformers`. This is optional — the project runs fully in mock mode without downloading any model.
+This project can run an instruction model locally with Hugging Face `transformers`.
 
-No hosted API, no API key, and no clinical data are used. The model is downloaded to your local Hugging Face cache on first use and then loaded from cache in later runs.
+You do not need:
 
-Recommended first model:
+- a hosted API,
+- an API key,
+- Ollama,
+- real clinical data.
+
+The model is downloaded once into your Hugging Face cache and reused from there in later runs.
+
+Default model:
 
 ```text
 Qwen/Qwen2.5-0.5B-Instruct
 ```
 
-Why this model first: it is small enough to test on a normal laptop and is suitable for a lightweight local-inference demo. You can later try larger instruction models if your machine has enough RAM/VRAM.
+This model was chosen because it is small enough for a first local CPU run on a normal laptop. It is not expected to be clinically strong; it is used here to test the full local inference pipeline.
 
 ---
 
-## What “local inference” means
+## What local inference means
 
-Local inference means:
+In this repo, local inference means:
 
 ```text
-Download model from Hugging Face Hub
-→ load it locally with transformers
-→ send a prompt
-→ generate labels
+report text
+→ prompt
+→ local Hugging Face model
+→ generated JSON labels
+→ evaluation against gold labels
 ```
 
-This is not fine-tuning. Fine-tuning would mean training/adapting the model on your own labeled data. This project only performs prompt-based inference.
+This is not fine-tuning. Fine-tuning would mean training/adapting a model on labeled data. This project only uses a pretrained instruction model and asks it to generate labels.
 
 ---
 
@@ -40,19 +48,25 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Check that the Hugging Face model can be downloaded/loaded locally:
+Run the mock pipeline first. This does not download a model:
+
+```powershell
+python src/main.py --config configs/demo_mock.yaml
+```
+
+Then test local Hugging Face loading:
 
 ```powershell
 python src/check_huggingface.py
 ```
+
+The first run may take time because it downloads the model files. Later runs should load from cache.
 
 Run the real local Hugging Face benchmark:
 
 ```powershell
 python src/main.py --config configs/demo_hf_local.yaml
 ```
-
-If your machine is slow, the first run may take a while because the model is downloaded and loaded locally.
 
 ---
 
@@ -63,39 +77,16 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+python src/main.py --config configs/demo_mock.yaml
 python src/check_huggingface.py
 python src/main.py --config configs/demo_hf_local.yaml
 ```
 
 ---
 
-## Optional: choose another model
+## Where the model is stored
 
-You can pass another model to the check script:
-
-```bash
-python src/check_huggingface.py --model Qwen/Qwen2.5-0.5B-Instruct
-```
-
-You can also edit the model in:
-
-```text
-configs/demo_hf_local.yaml
-```
-
-Example:
-
-```yaml
-llm:
-  mode: huggingface
-  model: Qwen/Qwen2.5-0.5B-Instruct
-```
-
----
-
-## Where models are cached
-
-By default, Hugging Face stores downloaded model files in your user cache directory, not inside this repository.
+The model is not stored inside this repository.
 
 Typical Windows cache location:
 
@@ -109,7 +100,7 @@ Typical macOS/Linux cache location:
 ~/.cache/huggingface/hub
 ```
 
-You normally do not need to manage this manually.
+You normally do not need to edit or move these files manually.
 
 ---
 
@@ -121,13 +112,13 @@ Strict real model run:
 python src/main.py --config configs/demo_hf_local.yaml
 ```
 
-This uses:
+This config uses:
 
 ```yaml
 fallback_to_mock: false
 ```
 
-So if the model cannot be loaded, the run stops clearly and does not silently create mock results.
+So if the model cannot be loaded, the run stops instead of silently creating mock results.
 
 Forgiving run:
 
@@ -141,24 +132,39 @@ This falls back to mock mode if the model cannot be loaded. Results from this mo
 llm_hf_fallback_mock
 ```
 
-They are not mislabeled as real Hugging Face results.
+They should not be treated as real Hugging Face model results.
 
 ---
 
-## Verifying the run was real Hugging Face inference
+## How to verify a real Hugging Face run
 
-After a run, open:
+After running the benchmark, open:
 
 ```text
 experiments/run_metadata.json
 ```
 
-For real local Hugging Face inference, check:
+For a real local model run, check:
 
 ```json
 "real_huggingface_used": true,
 "fallback_mock_used": false,
-"methods_run": ["keyword", "negation_rule", "llm_hf_local"]
+"real_hf_calls": 30
 ```
 
-If you see `llm_mock` or `llm_hf_fallback_mock`, the LLM result is not a real local model result.
+Also check `experiments/results.csv`. It should contain:
+
+```text
+llm_hf_local
+```
+
+If you see `llm_mock` or `llm_hf_fallback_mock`, the LLM result was not produced by the real local model.
+
+---
+
+## Common notes
+
+- A warning about unauthenticated Hugging Face requests is usually fine for this small model.
+- A Windows symlink warning is also usually fine; caching still works, but may use slightly more disk space.
+- CPU inference can be slow. That is normal for a laptop without an NVIDIA GPU.
+- Start with the default 0.5B model before trying larger models.
