@@ -1,6 +1,6 @@
 # Clinical NLP Radiology Report Labeling Mini-Benchmark
 
-This is a small research-preparation project for testing how different approaches label chest X-ray radiology-style reports.
+A small, reproducible clinical NLP benchmark for testing how different methods label chest-X-ray-style radiology reports.
 
 It compares:
 
@@ -10,7 +10,7 @@ It compares:
 
 The project uses only synthetic reports. No real clinical reports, no MIMIC-CXR files, no hosted APIs, and no API keys are used.
 
-> This is not a clinical tool. The goal is to understand the labeling problem, not to make medical decisions.
+> This is not a clinical tool. The goal is to study the report-labeling problem and compare failure modes, not to make medical decisions.
 
 ---
 
@@ -59,7 +59,7 @@ Default local model:
 Qwen/Qwen2.5-0.5B-Instruct
 ```
 
-I chose a small model first because it can run on a normal laptop. The goal here is not to prove that LLMs always perform better, but to benchmark them honestly against simpler baselines.
+The default model is intentionally small so the full local-inference pipeline can run on a normal laptop. The goal is not to prove that LLMs always perform better, but to benchmark them against simpler and more interpretable baselines.
 
 ---
 
@@ -104,7 +104,7 @@ Summary results:
 | `negation_rule` | 0.875 | 0.749 |
 | `llm_hf_local` | 0.667 | 0.368 |
 
-The rule-based labeler performs best on this small synthetic dataset. The local 0.5B Hugging Face model ran successfully, but it often confused `negative` with `not_mentioned`. That is a useful result: it shows why medical report labeling needs proper evaluation instead of assuming an LLM will automatically outperform simpler methods.
+The rule-based labeler performs best on this small synthetic dataset. The local 0.5B Hugging Face model ran successfully, but it often confused `negative` with `not_mentioned`. This is a useful result: it shows why medical report labeling needs proper evaluation instead of assuming that an LLM will automatically outperform simpler methods.
 
 Generated plots:
 
@@ -115,6 +115,18 @@ Generated plots:
 ![Error count by method](experiments/plots/error_count_by_method.png)
 
 ![Pneumonia confusion matrix](experiments/plots/confusion_matrix_pneumonia.png)
+
+---
+
+## What to look at first
+
+For a quick review:
+
+- `README.md` gives the project overview and latest result.
+- `report/mini_report.md` gives a short research-style write-up.
+- `experiments/results.csv` contains the metric table.
+- `experiments/run_metadata.json` confirms whether the Hugging Face model really ran.
+- `src/labelers/` contains the keyword, rule-based, and local LLM labelers.
 
 ---
 
