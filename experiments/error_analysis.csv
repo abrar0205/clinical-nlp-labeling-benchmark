@@ -1,66 +1,91 @@
 report_id,method,pathology,report_text,gold_label,predicted_label,error_type
 R001,keyword,pleural_effusion,No evidence of pneumothorax or pleural effusion.,negative,positive,false_positive_negation_error
 R001,keyword,pneumothorax,No evidence of pneumothorax or pleural effusion.,negative,positive,false_positive_negation_error
+R001,llm_hf_local,pleural_effusion,No evidence of pneumothorax or pleural effusion.,negative,not_mentioned,other
+R001,llm_hf_local,pneumothorax,No evidence of pneumothorax or pleural effusion.,negative,not_mentioned,other
 R003,keyword,pneumonia,Right lower lobe opacity may represent pneumonia.,uncertain,positive,uncertainty_misclassified
+R003,llm_hf_local,pneumonia,Right lower lobe opacity may represent pneumonia.,uncertain,negative,uncertainty_misclassified
 R004,keyword,pleural_effusion,Pleural effusion cannot be excluded.,uncertain,positive,uncertainty_misclassified
 R005,keyword,pneumonia,The lungs are clear without focal consolidation.,negative,positive,false_positive_negation_error
+R005,llm_hf_local,pneumonia,The lungs are clear without focal consolidation.,negative,not_mentioned,other
+R006,llm_hf_local,pleural_effusion,Small left apical pneumothorax is seen.,not_mentioned,positive,not_mentioned_confusion
+R006,llm_hf_local,pneumothorax,Small left apical pneumothorax is seen.,positive,negative,false_negative_missed_concept
 R007,keyword,cardiomegaly,Cardiomediastinal silhouette is within normal limits.,negative,not_mentioned,other
 R007,negation_rule,cardiomegaly,Cardiomediastinal silhouette is within normal limits.,negative,not_mentioned,other
-R007,llm_mock,cardiomegaly,Cardiomediastinal silhouette is within normal limits.,negative,not_mentioned,other
+R007,llm_hf_local,cardiomegaly,Cardiomediastinal silhouette is within normal limits.,negative,not_mentioned,other
 R009,keyword,pneumonia,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,positive,false_positive_negation_error
 R009,keyword,pleural_effusion,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,positive,false_positive_negation_error
 R009,keyword,pneumothorax,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,positive,false_positive_negation_error
 R009,keyword,cardiomegaly,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,not_mentioned,other
 R009,negation_rule,cardiomegaly,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,not_mentioned,other
-R009,llm_mock,cardiomegaly,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,not_mentioned,other
+R009,llm_hf_local,pneumonia,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,not_mentioned,other
+R009,llm_hf_local,pleural_effusion,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,not_mentioned,other
+R009,llm_hf_local,pneumothorax,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,not_mentioned,other
+R009,llm_hf_local,cardiomegaly,"No focal consolidation, pleural effusion, or pneumothorax. Heart size is normal.",negative,not_mentioned,other
 R010,keyword,pleural_effusion,The cardiac silhouette is enlarged. Possible small pleural effusion.,uncertain,positive,uncertainty_misclassified
 R010,keyword,cardiomegaly,The cardiac silhouette is enlarged. Possible small pleural effusion.,positive,not_mentioned,false_negative_missed_concept
 R010,negation_rule,cardiomegaly,The cardiac silhouette is enlarged. Possible small pleural effusion.,positive,not_mentioned,false_negative_missed_concept
-R010,llm_mock,cardiomegaly,The cardiac silhouette is enlarged. Possible small pleural effusion.,positive,not_mentioned,false_negative_missed_concept
+R010,llm_hf_local,pleural_effusion,The cardiac silhouette is enlarged. Possible small pleural effusion.,uncertain,positive,uncertainty_misclassified
+R010,llm_hf_local,cardiomegaly,The cardiac silhouette is enlarged. Possible small pleural effusion.,positive,not_mentioned,false_negative_missed_concept
 R011,keyword,pneumonia,Findings suspicious for pneumonia in the left lung base.,uncertain,positive,uncertainty_misclassified
+R011,llm_hf_local,pneumonia,Findings suspicious for pneumonia in the left lung base.,uncertain,not_mentioned,uncertainty_misclassified
 R013,keyword,pneumothorax,No pneumothorax following line placement.,negative,positive,false_positive_negation_error
+R013,llm_hf_local,pneumothorax,No pneumothorax following line placement.,negative,positive,false_positive_negation_error
 R014,keyword,pleural_effusion,Stable cardiomegaly. No pleural effusion.,negative,positive,false_positive_negation_error
+R014,llm_hf_local,pleural_effusion,Stable cardiomegaly. No pleural effusion.,negative,not_mentioned,other
+R014,llm_hf_local,cardiomegaly,Stable cardiomegaly. No pleural effusion.,positive,not_mentioned,false_negative_missed_concept
+R015,llm_hf_local,pneumonia,Airspace opacity in the right upper lobe compatible with pneumonia.,positive,not_mentioned,false_negative_missed_concept
 R016,keyword,pneumothorax,"Questionable left apical pneumothorax, recommend follow-up.",uncertain,positive,uncertainty_misclassified
+R016,llm_hf_local,pleural_effusion,"Questionable left apical pneumothorax, recommend follow-up.",not_mentioned,uncertain,not_mentioned_confusion
+R016,llm_hf_local,pneumothorax,"Questionable left apical pneumothorax, recommend follow-up.",uncertain,not_mentioned,uncertainty_misclassified
 R017,keyword,pleural_effusion,Moderate pleural effusion cannot be excluded on this view.,uncertain,positive,uncertainty_misclassified
 R018,keyword,pneumonia,Heart size within normal limits. Lungs are clear.,negative,not_mentioned,other
 R018,keyword,cardiomegaly,Heart size within normal limits. Lungs are clear.,negative,not_mentioned,other
 R018,negation_rule,pneumonia,Heart size within normal limits. Lungs are clear.,negative,not_mentioned,other
 R018,negation_rule,cardiomegaly,Heart size within normal limits. Lungs are clear.,negative,not_mentioned,other
-R018,llm_mock,pneumonia,Heart size within normal limits. Lungs are clear.,negative,not_mentioned,other
-R018,llm_mock,cardiomegaly,Heart size within normal limits. Lungs are clear.,negative,not_mentioned,other
+R018,llm_hf_local,pneumonia,Heart size within normal limits. Lungs are clear.,negative,not_mentioned,other
+R018,llm_hf_local,cardiomegaly,Heart size within normal limits. Lungs are clear.,negative,not_mentioned,other
 R019,keyword,pneumonia,"Infiltrate in the left lower lobe, likely representing pneumonia.",uncertain,positive,uncertainty_misclassified
 R019,negation_rule,pneumonia,"Infiltrate in the left lower lobe, likely representing pneumonia.",uncertain,positive,uncertainty_misclassified
-R019,llm_mock,pneumonia,"Infiltrate in the left lower lobe, likely representing pneumonia.",uncertain,positive,uncertainty_misclassified
+R019,llm_hf_local,pneumonia,"Infiltrate in the left lower lobe, likely representing pneumonia.",uncertain,positive,uncertainty_misclassified
+R020,llm_hf_local,pleural_effusion,Tension pneumothorax on the right requiring urgent attention.,not_mentioned,uncertain,not_mentioned_confusion
 R021,keyword,cardiomegaly,The heart is enlarged with pulmonary vascular congestion.,positive,not_mentioned,false_negative_missed_concept
 R021,negation_rule,cardiomegaly,The heart is enlarged with pulmonary vascular congestion.,positive,not_mentioned,false_negative_missed_concept
-R021,llm_mock,cardiomegaly,The heart is enlarged with pulmonary vascular congestion.,positive,not_mentioned,false_negative_missed_concept
+R021,llm_hf_local,cardiomegaly,The heart is enlarged with pulmonary vascular congestion.,positive,not_mentioned,false_negative_missed_concept
 R022,keyword,pneumonia,No acute cardiopulmonary process. No effusion or pneumothorax.,negative,not_mentioned,other
 R022,keyword,pleural_effusion,No acute cardiopulmonary process. No effusion or pneumothorax.,negative,positive,false_positive_negation_error
 R022,keyword,pneumothorax,No acute cardiopulmonary process. No effusion or pneumothorax.,negative,positive,false_positive_negation_error
 R022,negation_rule,pneumonia,No acute cardiopulmonary process. No effusion or pneumothorax.,negative,not_mentioned,other
-R022,llm_mock,pneumonia,No acute cardiopulmonary process. No effusion or pneumothorax.,negative,not_mentioned,other
+R022,llm_hf_local,pneumonia,No acute cardiopulmonary process. No effusion or pneumothorax.,negative,not_mentioned,other
+R022,llm_hf_local,pleural_effusion,No acute cardiopulmonary process. No effusion or pneumothorax.,negative,not_mentioned,other
+R022,llm_hf_local,pneumothorax,No acute cardiopulmonary process. No effusion or pneumothorax.,negative,not_mentioned,other
 R024,negation_rule,cardiomegaly,Enlarged cardiac silhouette suggestive of cardiomegaly.,positive,uncertain,other
-R024,llm_mock,cardiomegaly,Enlarged cardiac silhouette suggestive of cardiomegaly.,positive,uncertain,other
 R025,keyword,pneumonia,Consolidation versus atelectasis in the right base; pneumonia is possible.,uncertain,positive,uncertainty_misclassified
 R025,negation_rule,pneumonia,Consolidation versus atelectasis in the right base; pneumonia is possible.,uncertain,positive,uncertainty_misclassified
-R025,llm_mock,pneumonia,Consolidation versus atelectasis in the right base; pneumonia is possible.,uncertain,positive,uncertainty_misclassified
+R025,llm_hf_local,pneumonia,Consolidation versus atelectasis in the right base; pneumonia is possible.,uncertain,positive,uncertainty_misclassified
 R026,keyword,pleural_effusion,Interval resolution of previously seen pleural effusion; none seen currently.,negative,positive,false_positive_negation_error
 R026,negation_rule,pleural_effusion,Interval resolution of previously seen pleural effusion; none seen currently.,negative,positive,false_positive_negation_error
-R026,llm_mock,pleural_effusion,Interval resolution of previously seen pleural effusion; none seen currently.,negative,positive,false_positive_negation_error
+R026,llm_hf_local,pleural_effusion,Interval resolution of previously seen pleural effusion; none seen currently.,negative,positive,false_positive_negation_error
 R027,keyword,cardiomegaly,Cardiomegaly is not present. Lungs are well expanded and clear.,negative,positive,false_positive_negation_error
 R027,negation_rule,cardiomegaly,Cardiomegaly is not present. Lungs are well expanded and clear.,negative,positive,false_positive_negation_error
-R027,llm_mock,cardiomegaly,Cardiomegaly is not present. Lungs are well expanded and clear.,negative,positive,false_positive_negation_error
+R027,llm_hf_local,cardiomegaly,Cardiomegaly is not present. Lungs are well expanded and clear.,negative,positive,false_positive_negation_error
 R028,keyword,pleural_effusion,Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.,negative,positive,false_positive_negation_error
 R028,keyword,pneumothorax,Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.,negative,positive,false_positive_negation_error
 R028,keyword,cardiomegaly,Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.,negative,not_mentioned,other
 R028,negation_rule,cardiomegaly,Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.,negative,not_mentioned,other
-R028,llm_mock,cardiomegaly,Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.,negative,not_mentioned,other
+R028,llm_hf_local,pneumonia,Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.,positive,negative,false_negative_missed_concept
+R028,llm_hf_local,pleural_effusion,Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.,negative,not_mentioned,other
+R028,llm_hf_local,pneumothorax,Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.,negative,not_mentioned,other
+R028,llm_hf_local,cardiomegaly,Findings compatible with pneumonia. No pleural effusion or pneumothorax. Heart size normal.,negative,not_mentioned,other
 R029,keyword,pneumonia,"Trace pleural effusion, likely physiologic. No focal airspace opacity.",negative,positive,false_positive_negation_error
+R029,llm_hf_local,pneumonia,"Trace pleural effusion, likely physiologic. No focal airspace opacity.",negative,not_mentioned,other
 R030,keyword,pneumonia,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,positive,false_positive_negation_error
 R030,keyword,pleural_effusion,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,positive,false_positive_negation_error
 R030,keyword,pneumothorax,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,positive,false_positive_negation_error
 R030,keyword,cardiomegaly,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,positive,false_positive_negation_error
 R030,negation_rule,pneumothorax,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,positive,false_positive_negation_error
 R030,negation_rule,cardiomegaly,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,positive,false_positive_negation_error
-R030,llm_mock,pneumothorax,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,positive,false_positive_negation_error
-R030,llm_mock,cardiomegaly,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,positive,false_positive_negation_error
+R030,llm_hf_local,pneumonia,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,not_mentioned,other
+R030,llm_hf_local,pleural_effusion,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,not_mentioned,other
+R030,llm_hf_local,pneumothorax,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,not_mentioned,other
+R030,llm_hf_local,cardiomegaly,"No radiographic evidence of pneumonia, effusion, pneumothorax, or cardiomegaly.",negative,not_mentioned,other

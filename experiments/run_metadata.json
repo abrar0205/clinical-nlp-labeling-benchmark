@@ -1,20 +1,20 @@
 {
-  "timestamp": "2026-07-10T19:50:12.737864+00:00",
-  "config_path": "configs/demo_mock.yaml",
+  "timestamp": "2026-07-11T13:47:29.697139+00:00",
+  "config_path": "configs/demo_hf_local.yaml",
   "data_path": "data/synthetic_demo_reports.csv",
   "num_reports": 30,
   "methods_run": [
     "keyword",
     "negation_rule",
-    "llm_mock"
+    "llm_hf_local"
   ],
-  "llm_mode": "mock",
-  "llm_model": "gemma3:1b",
-  "ollama_endpoint": "http://localhost:11434/api/generate",
-  "fallback_to_mock": true,
-  "real_ollama_gemma_used": false,
+  "llm_mode": "huggingface",
+  "llm_model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "fallback_to_mock": false,
+  "cache_dir": null,
+  "real_huggingface_used": true,
   "fallback_mock_used": false,
-  "real_gemma_calls": 0,
+  "real_hf_calls": 30,
   "fallback_calls": 0,
   "output_files": [
     "experiments\\predictions.csv",

@@ -9,8 +9,8 @@ negation_rule,pleural_effusion,0.9667,0.95,0.9643,0.953,30
 negation_rule,pneumothorax,0.9667,0.9167,0.9583,0.9273,30
 negation_rule,cardiomegaly,0.7,0.315,0.35,0.327,30
 negation_rule,macro_avg,0.875,,,0.7494,120
-llm_mock,pneumonia,0.8667,0.8737,0.7917,0.7903,30
-llm_mock,pleural_effusion,0.9667,0.95,0.9643,0.953,30
-llm_mock,pneumothorax,0.9667,0.9167,0.9583,0.9273,30
-llm_mock,cardiomegaly,0.7,0.315,0.35,0.327,30
-llm_mock,macro_avg,0.875,,,0.7494,120
+llm_hf_local,pneumonia,0.6,0.2533,0.3333,0.2857,30
+llm_hf_local,pleural_effusion,0.6333,0.4389,0.6198,0.5104,30
+llm_hf_local,pneumothorax,0.7333,0.3194,0.375,0.3438,30
+llm_hf_local,cardiomegaly,0.7,0.3426,0.35,0.3315,30
+llm_hf_local,macro_avg,0.6667,,,0.3678,120
