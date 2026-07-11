@@ -1,60 +1,57 @@
 # Clinical NLP Radiology Report Labeling Mini-Benchmark
-### Keyword, Negation-Aware, and Hugging Face Local Inference
 
-A small, honest, reproducible benchmark comparing three approaches to extracting pathology labels from chest X-ray radiology-style reports: a **keyword baseline**, a **negation-aware rule-based labeler**, and an optional **Hugging Face instruction-model labeler** run locally with `transformers`. A **mock LLM mode** lets the whole project run immediately with no model download.
+This is a small research-preparation project for testing how different approaches label chest X-ray radiology-style reports.
 
-> **This project is a lightweight preparation benchmark and is not clinically validated. It is not a clinical tool.** It uses only synthetic demo reports.
+It compares:
+
+1. a keyword baseline,
+2. a negation-aware rule-based labeler,
+3. a local Hugging Face instruction model loaded with `transformers`.
+
+The project uses only synthetic reports. No real clinical reports, no MIMIC-CXR files, no hosted APIs, and no API keys are used.
+
+> This is not a clinical tool. The goal is to understand the labeling problem, not to make medical decisions.
 
 ---
 
-## 1. Project overview
+## Why this project exists
 
-Chest X-ray classifiers are often trained on pathology labels extracted from free-text radiology reports. If those labels are wrong, every downstream model inherits the error. Extracting labels reliably is hard precisely because reports are full of **negation** ("no pleural effusion") and **uncertainty** ("effusion cannot be excluded").
+Radiology reports often contain short phrases such as:
 
-This repository reproduces that *core challenge* at a small scale: it compares labeling strategies on four pathologies and four label classes, and produces reproducible result files, error analysis, run metadata, and plots — all saved locally under `experiments/`.
-
-**Core research question:** How do keyword-based, negation-aware, and LLM-based labeling approaches differ when extracting pathology labels from chest X-ray reports containing negation, uncertainty, and clinical context?
-
-- **Pathologies:** pneumonia · pleural effusion · pneumothorax · cardiomegaly
-- **Label space:** `positive` · `negative` · `uncertain` · `not_mentioned`
-
-## 2. Methods
-
-| Method | Idea | Handles negation? | Handles uncertainty? |
-|---|---|:---:|:---:|
-| **keyword baseline** | Pathology word present → `positive`, else `not_mentioned` | ❌ | ❌ |
-| **negation-aware rule-based** | Clause splitting + window-based negation/uncertainty cues | ✅ | ✅ |
-| **Hugging Face local model** | Local instruction model prompted to return JSON labels | ✅ (prompt-based) | ✅ (prompt-based) |
-| **mock LLM** | Reuses the rule-based labeler for reproducibility without model download | ✅ | ✅ |
-
-The LLM labeler can run **locally** using Hugging Face `transformers`; no hosted API and no API key are required. Because not everyone wants to download a model immediately, **mock** mode keeps the pipeline fully runnable out of the box.
-
-## 3. Dataset
-
-The included dataset is **fully synthetic**: 30 artificial chest-X-ray-style report snippets written for this project. They cover clear positives, clear negations, uncertainty phrasing, not-mentioned cases, mixed multi-pathology reports, and deliberately difficult cases where keyword matching fails.
-
-- File: [`data/synthetic_demo_reports.csv`](data/synthetic_demo_reports.csv)
-- Columns: `report_id`, `report_text`, `pneumonia_gold`, `pleural_effusion_gold`, `pneumothorax_gold`, `cardiomegaly_gold`
-- Gold values: `positive`, `negative`, `uncertain`, `not_mentioned`
-
-You can point the pipeline at your own local CSV (same columns) via `data_path` in a config file.
-
-> **No real MIMIC-CXR / MIMIC-CXR-JPG data is included or redistributed.** No real clinical reports are used. Keep any private data under `data/private/` (git-ignored).
-
-## 4. Quick run without model download
-
-Requires Python 3.9+ (developed on 3.13). Runs on a normal laptop.
-
-```bash
-pip install -r requirements.txt
-python src/main.py --config configs/demo_mock.yaml
+```text
+No pleural effusion.
+Pneumothorax cannot be excluded.
+Findings suspicious for pneumonia.
 ```
 
-This runs the keyword, negation-aware, and **mock** LLM labelers and writes all outputs to `experiments/`.
+A simple keyword search can detect the disease word, but it does not understand whether the finding is present, absent, or uncertain. That is the main problem this repo explores.
 
-## 5. Run real Hugging Face local inference
+The benchmark asks:
 
-See [`HUGGINGFACE_SETUP.md`](HUGGINGFACE_SETUP.md) for full Windows / macOS / Linux steps.
+> How do keyword-based, negation-aware, and local LLM-based methods behave when extracting pathology labels from reports with negation and uncertainty?
+
+Pathologies:
+
+```text
+pneumonia, pleural_effusion, pneumothorax, cardiomegaly
+```
+
+Labels:
+
+```text
+positive, negative, uncertain, not_mentioned
+```
+
+---
+
+## Methods
+
+| Method | What it does | Main weakness |
+|---|---|---|
+| `keyword` | Checks whether pathology-related words appear | Cannot handle negation or uncertainty |
+| `negation_rule` | Uses simple negation/uncertainty cues around pathology terms | Still misses phrasing outside the cue list |
+| `llm_hf_local` | Runs a local Hugging Face instruction model and asks for JSON labels | Small models can be inconsistent on strict clinical-style extraction |
+| `llm_mock` | Reuses the rule labeler so the repo runs without downloading a model | Not a real LLM result |
 
 Default local model:
 
@@ -62,7 +59,81 @@ Default local model:
 Qwen/Qwen2.5-0.5B-Instruct
 ```
 
-In short:
+I chose a small model first because it can run on a normal laptop. The goal here is not to prove that LLMs always perform better, but to benchmark them honestly against simpler baselines.
+
+---
+
+## Dataset
+
+The dataset contains 30 synthetic chest-X-ray-style report snippets.
+
+File:
+
+```text
+data/synthetic_demo_reports.csv
+```
+
+Columns:
+
+```text
+report_id, report_text, pneumonia_gold, pleural_effusion_gold,
+pneumothorax_gold, cardiomegaly_gold
+```
+
+No real MIMIC-CXR / MIMIC-CXR-JPG data is included or redistributed.
+
+---
+
+## Latest run
+
+The latest committed run used real local Hugging Face inference:
+
+```text
+config: configs/demo_hf_local.yaml
+model:  Qwen/Qwen2.5-0.5B-Instruct
+real_huggingface_used: true
+fallback_mock_used: false
+real_hf_calls: 30
+```
+
+Summary results:
+
+| Method | Overall accuracy | Macro-F1 |
+|---|:---:|:---:|
+| `keyword` | 0.708 | 0.353 |
+| `negation_rule` | 0.875 | 0.749 |
+| `llm_hf_local` | 0.667 | 0.368 |
+
+The rule-based labeler performs best on this small synthetic dataset. The local 0.5B Hugging Face model ran successfully, but it often confused `negative` with `not_mentioned`. That is a useful result: it shows why medical report labeling needs proper evaluation instead of assuming an LLM will automatically outperform simpler methods.
+
+Generated plots:
+
+![Macro-F1 by method](experiments/plots/macro_f1_by_method.png)
+
+![Per-pathology macro-F1](experiments/plots/per_pathology_f1.png)
+
+![Error count by method](experiments/plots/error_count_by_method.png)
+
+![Pneumonia confusion matrix](experiments/plots/confusion_matrix_pneumonia.png)
+
+---
+
+## Quick start: run without downloading a model
+
+```bash
+pip install -r requirements.txt
+python src/main.py --config configs/demo_mock.yaml
+```
+
+This runs the keyword, negation-rule, and mock LLM paths.
+
+---
+
+## Run local Hugging Face inference
+
+See [`HUGGINGFACE_SETUP.md`](HUGGINGFACE_SETUP.md) for the full setup.
+
+Short version:
 
 ```bash
 pip install -r requirements.txt
@@ -70,83 +141,93 @@ python src/check_huggingface.py
 python src/main.py --config configs/demo_hf_local.yaml
 ```
 
-The first local inference run may download the model into your Hugging Face cache. Later runs load it from cache.
+The first Hugging Face run downloads the model into your local Hugging Face cache. Later runs load it from cache.
 
-Honesty notes:
-
-- **Mock mode is not a real LLM result.**
-- **Real Hugging Face local inference** appears with the method name **`llm_hf_local`**.
-- **Fallback** results appear as **`llm_hf_fallback_mock`** and are never mislabeled as real model output.
-- The strict config `configs/demo_hf_local.yaml` uses `fallback_to_mock: false`, so if the model cannot be loaded it **stops clearly** instead of silently mocking.
-- Use `configs/demo_hf_local_fallback.yaml` for a forgiving run.
-- Always check [`experiments/run_metadata.json`](experiments) to confirm the run type.
-
-## 6. Outputs
-
-Every run generates, under `experiments/`:
+To verify that the model really ran, open:
 
 ```text
-experiments/predictions.csv      # per (report, method, pathology) predictions
-experiments/results.csv          # accuracy + macro precision/recall/F1
-experiments/error_analysis.csv   # typed errors for incorrect predictions
-experiments/run_metadata.json    # exactly what ran (mock vs real HF model)
-experiments/plots/               # macro-F1, per-pathology F1, errors, confusion matrix
+experiments/run_metadata.json
 ```
 
-Plots are written **only** to `experiments/plots/`.
+For a real local model run, it should contain:
 
-## 7. How to commit local Hugging Face results
-
-After running real local Hugging Face inference, you can commit the generated artifacts so others can see your results:
-
-```bash
-git add experiments/results.csv experiments/predictions.csv \
-        experiments/error_analysis.csv experiments/run_metadata.json \
-        experiments/plots/
-git commit -m "Add local Hugging Face benchmark results"
-git push
+```json
+"real_huggingface_used": true,
+"fallback_mock_used": false
 ```
 
-`run_metadata.json` documents that the results came from real local inference (`"real_huggingface_used": true`).
+The method name in `experiments/results.csv` should be:
 
-## 8. Repository layout
+```text
+llm_hf_local
+```
+
+---
+
+## Outputs
+
+Each run writes files under `experiments/`:
+
+```text
+experiments/predictions.csv
+experiments/results.csv
+experiments/error_analysis.csv
+experiments/run_metadata.json
+experiments/plots/
+```
+
+---
+
+## Repository layout
 
 ```text
 clinical-nlp-labeling-benchmark/
-├── README.md
-├── HUGGINGFACE_SETUP.md
-├── requirements.txt
 ├── configs/
 │   ├── demo_mock.yaml
-│   ├── demo_hf_local.yaml            # strict: fails if model cannot load
-│   └── demo_hf_local_fallback.yaml   # forgiving: falls back to mock
+│   ├── demo_hf_local.yaml
+│   └── demo_hf_local_fallback.yaml
 ├── data/
 │   └── synthetic_demo_reports.csv
+├── experiments/
+│   ├── results.csv
+│   ├── predictions.csv
+│   ├── error_analysis.csv
+│   ├── run_metadata.json
+│   └── plots/
+├── report/
+│   └── mini_report.md
 ├── src/
 │   ├── main.py
 │   ├── check_huggingface.py
-│   ├── utils.py
-│   ├── preprocessing/clean_reports.py
-│   ├── labelers/{keyword_labeler,negation_rule_labeler,llm_labeler}.py
-│   ├── evaluation/{metrics,error_analysis}.py
-│   └── visualization/plot_results.py
-├── experiments/            # generated outputs (results, predictions, plots, metadata)
-└── report/mini_report.md
+│   ├── labelers/
+│   ├── evaluation/
+│   └── visualization/
+├── HUGGINGFACE_SETUP.md
+├── README.md
+└── requirements.txt
 ```
 
-## 9. Limitations
+---
 
-- Tiny **synthetic** dataset (30 snippets); numbers are illustrative only.
-- Not clinically validated; **not** a clinical tool.
-- The rule-based labeler uses small, fixed cue lists and simple windows; it misses out-of-vocabulary phrasing and findings expressed without a keyword.
-- LLM output may vary between models and environments.
-- **No real MIMIC-CXR data is included or redistributed.**
+## Limitations
 
-## 10. Future work
+- The dataset is small and synthetic.
+- Results are for demonstration and method comparison only.
+- The local LLM uses prompt-based inference, not fine-tuning.
+- The rule-based method depends on fixed cue lists.
+- The project is not clinically validated and is not a clinical tool.
+- No real clinical/MIMIC data is included.
 
-- Evaluate other local Hugging Face instruction models on larger, properly annotated report sets.
-- Study how label quality affects **downstream chest X-ray classifier training**.
-- Move toward a MIMIC-CXR / MIMIC-CXR-JPG labeling benchmark under appropriate data-use agreements (never redistributing the data).
-- Fine-tuning could be explored only after access to a properly annotated dataset; this project currently uses prompt-based local inference, not fine-tuning.
+---
 
-See [`report/mini_report.md`](report/mini_report.md) for the academic write-up.
+## Future work
+
+Useful next steps would be:
+
+- test a stronger local instruction model,
+- improve the prompt with a few examples,
+- compare against clinical NLP tools on approved datasets,
+- study how label errors affect downstream chest X-ray classifiers,
+- explore fine-tuning only after access to a properly annotated dataset.
+
+For more detail, see [`report/mini_report.md`](report/mini_report.md).
